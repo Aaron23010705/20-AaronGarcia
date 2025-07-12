@@ -1,17 +1,12 @@
 const ReservationController = {};
 import Reservation from "../models/Reservation.js";
 
-
-
 /*
-ClientId
-Vehicle
-Service
+clientId
+vehicle
+service
 status
 */ 
-
-
-
 
 ReservationController.getReservationById = async (req, res) => {
     try {
@@ -22,13 +17,13 @@ ReservationController.getReservationById = async (req, res) => {
             return res.status(400).json({ message: "Invalid ID format" });
         }
 
-        const client = await Reservation.findById(id);
+        const reservation = await Reservation.findById(id).populate('clientId');
         
-        if (!client) {
-            return res.status(404).json({ message: "Client not found" });
+        if (!reservation) {
+            return res.status(404).json({ message: "Reservation not found" });
         }
 
-        res.status(200).json(client);
+        res.status(200).json(reservation);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -36,7 +31,7 @@ ReservationController.getReservationById = async (req, res) => {
 
 ReservationController.getReservations = async (req, res) => {
     try {
-        const reservations = await Reservation.find();
+        const reservations = await Reservation.find().populate('clientId');
         res.status(200).json(reservations);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -45,66 +40,59 @@ ReservationController.getReservations = async (req, res) => {
 
 ReservationController.insertReservation = async (req, res) => {
     try {
-        const { name, password, email, phone, age } = req.body;
+        const { clientId, vehicle, service, status } = req.body;
 
         // Validar campos requeridos
-        if (!name || !password || !email || !phone || !age) {
+        if (!clientId || !vehicle || !service || !status) {
             return res.status(400).json({ message: "All fields are required" });
         }
 
-        // Validar nombre
-        if (!validateName(name)) {
-            return res.status(400).json({ message: "Name must contain only letters and spaces, and be at least 2 characters long" });
-        }
-        if (name.length > 100) {
-            return res.status(400).json({ message: "Name cannot exceed 100 characters" });
+        // Validar clientId formato ObjectId
+        if (!clientId.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ message: "Invalid clientId format" });
         }
 
-        // Validar email
-        if (!validateEmail(email)) {
-            return res.status(400).json({ message: "Please provide a valid email address" });
+        // Validar vehicle
+        if (typeof vehicle !== 'string' || vehicle.trim().length === 0) {
+            return res.status(400).json({ message: "Vehicle must be a valid string" });
         }
-        if (email.length > 100) {
-            return res.status(400).json({ message: "Email cannot exceed 100 characters" });
-        }
-
-        // Validar password
-        if (!validatePassword(password)) {
-            return res.status(400).json({ message: "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character" });
-        }
-        if (password.length > 100) {
-            return res.status(400).json({ message: "Password cannot exceed 100 characters" });
+        if (vehicle.length > 200) {
+            return res.status(400).json({ message: "Vehicle cannot exceed 200 characters" });
         }
 
-        // Validar teléfono
-        if (!validatePhone(phone)) {
-            return res.status(400).json({ message: "Please provide a valid phone number" });
+        // Validar service
+        if (typeof service !== 'string' || service.trim().length === 0) {
+            return res.status(400).json({ message: "Service must be a valid string" });
+        }
+        if (service.length > 350) {
+            return res.status(400).json({ message: "Service cannot exceed 350 characters" });
         }
 
-        // Validar edad
-        if (!Number.isInteger(Number(age))) {
-            return res.status(400).json({ message: "Age must be a whole number" });
+        // Validar status
+        if (typeof status !== 'string' || status.trim().length === 0) {
+            return res.status(400).json({ message: "Status must be a valid string" });
         }
-        if (age < 15 || age > 80) {
-            return res.status(400).json({ message: "Age must be between 15 and 80 years" });
-        }
-
-        // Verificar si el cliente ya existe
-        const doesClientExist = await Reservation.findOne({ email: email.toLowerCase() });
-        if (doesClientExist) {
-            return res.status(400).json({ message: "Client already exists" });
+        if (status.length > 50) {
+            return res.status(400).json({ message: "Status cannot exceed 50 characters" });
         }
 
-        const newClient = new Reservation({ 
-            name: name.trim(), 
-            password, 
-            email: email.toLowerCase().trim(), 
-            phone, 
-            age: Number(age) 
+        // Validar valores permitidos para status
+        const validStatuses = ['pending', 'confirmed', 'in-progress', 'completed', 'cancelled'];
+        if (!validStatuses.includes(status.toLowerCase())) {
+            return res.status(400).json({ 
+                message: `Status must be one of: ${validStatuses.join(', ')}` 
+            });
+        }
+
+        const newReservation = new Reservation({ 
+            clientId: clientId.trim(),
+            vehicle: vehicle.trim(),
+            service: service.trim(),
+            status: status.toLowerCase().trim()
         });
         
-        await newClient.save();
-        res.status(201).json({ message: "Client saved successfully" });
+        await newReservation.save();
+        res.status(201).json({ message: "Reservation saved successfully" });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -112,78 +100,71 @@ ReservationController.insertReservation = async (req, res) => {
 
 ReservationController.updateReservation = async (req, res) => {
     try {
-        const { name, password, email, phone, age } = req.body;
+        const { clientId, vehicle, service, status } = req.body;
 
         // Validar campos requeridos
-        if (!name || !password || !email || !phone || !age) {
+        if (!clientId || !vehicle || !service || !status) {
             return res.status(400).json({ message: "All fields are required" });
         }
 
-        // Validar nombre
-        if (!validateName(name)) {
-            return res.status(400).json({ message: "Name must contain only letters and spaces, and be at least 2 characters long" });
-        }
-        if (name.length > 100) {
-            return res.status(400).json({ message: "Name cannot exceed 100 characters" });
+        // Validar clientId formato ObjectId
+        if (!clientId.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ message: "Invalid clientId format" });
         }
 
-        // Validar email
-        if (!validateEmail(email)) {
-            return res.status(400).json({ message: "Please provide a valid email address" });
+        // Validar vehicle
+        if (typeof vehicle !== 'string' || vehicle.trim().length === 0) {
+            return res.status(400).json({ message: "Vehicle must be a valid string" });
         }
-        if (email.length > 100) {
-            return res.status(400).json({ message: "Email cannot exceed 100 characters" });
-        }
-
-        // Validar password
-        if (!validatePassword(password)) {
-            return res.status(400).json({ message: "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character" });
-        }
-        if (password.length > 100) {
-            return res.status(400).json({ message: "Password cannot exceed 100 characters" });
+        if (vehicle.length > 200) {
+            return res.status(400).json({ message: "Vehicle cannot exceed 200 characters" });
         }
 
-        // Validar teléfono
-        if (!validatePhone(phone)) {
-            return res.status(400).json({ message: "Please provide a valid phone number" });
+        // Validar service
+        if (typeof service !== 'string' || service.trim().length === 0) {
+            return res.status(400).json({ message: "Service must be a valid string" });
+        }
+        if (service.length > 350) {
+            return res.status(400).json({ message: "Service cannot exceed 350 characters" });
         }
 
-        // Validar edad
-        if (!Number.isInteger(Number(age))) {
-            return res.status(400).json({ message: "Age must be a whole number" });
+        // Validar status
+        if (typeof status !== 'string' || status.trim().length === 0) {
+            return res.status(400).json({ message: "Status must be a valid string" });
         }
-        if (age < 15 || age > 80) {
-            return res.status(400).json({ message: "Age must be between 15 and 80 years" });
-        }
-
-        // Verificar si el cliente existe
-        const clientExists = await Reservation.findById(req.params.id);
-        if (!clientExists) {
-            return res.status(404).json({ message: "Client doesn't exist, can't update" });
+        if (status.length > 50) {
+            return res.status(400).json({ message: "Status cannot exceed 50 characters" });
         }
 
-        // Verificar si el email ya está siendo usado por otro cliente
-        const emailExists = await Reservation.findOne({ 
-            email: email.toLowerCase(), 
-            _id: { $ne: req.params.id } 
-        });
-        if (emailExists) {
-            return res.status(400).json({ message: "Email is already being used by another client" });
+        // Validar valores permitidos para status
+        const validStatuses = ['pending', 'confirmed', 'in-progress', 'completed', 'cancelled'];
+        if (!validStatuses.includes(status.toLowerCase())) {
+            return res.status(400).json({ 
+                message: `Status must be one of: ${validStatuses.join(', ')}` 
+            });
         }
 
-        const updateClient = await Reservation.findByIdAndUpdate(
+        // Verificar si la reservación existe
+        const reservationExists = await Reservation.findById(req.params.id);
+        if (!reservationExists) {
+            return res.status(404).json({ message: "Reservation doesn't exist, can't update" });
+        }
+
+        const updateReservation = await Reservation.findByIdAndUpdate(
             req.params.id,
             { 
-                name: name.trim(), 
-                password, 
-                email: email.toLowerCase().trim(), 
-                phone, 
-                age: Number(age) 
+                clientId: clientId.trim(),
+                vehicle: vehicle.trim(),
+                service: service.trim(),
+                status: status.toLowerCase().trim()
             },
             { new: true }
-        );
+        ).populate('clientId');
 
-        res.status(200).json({ message: "Client updated successfully", client: updateClient });
+        res.status(200).json({ 
+            message: "Reservation updated successfully", 
+            reservation: updateReservation 
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -191,14 +172,14 @@ ReservationController.updateReservation = async (req, res) => {
 
 ReservationController.deleteReservation = async (req, res) => {
     try {
-        // Verificar si el cliente existe antes de eliminar
-        const clientExists = await Reservation.findById(req.params.id);
-        if (!clientExists) {
-            return res.status(404).json({ message: "Client not found" });
+        // Verificar si la reservación existe antes de eliminar
+        const reservationExists = await Reservation.findById(req.params.id);
+        if (!reservationExists) {
+            return res.status(404).json({ message: "Reservation not found" });
         }
 
         await Reservation.findByIdAndDelete(req.params.id);
-        res.status(200).json({ message: "Client deleted successfully" });
+        res.status(200).json({ message: "Reservation deleted successfully" });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

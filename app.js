@@ -17,7 +17,7 @@ app.use("/api/reservation", ReservationRoutes)
 
 
 const swaggerDocument = JSON.parse(
-  fs.readFileSync(path.resolve("./docEPAv2.json"), "utf-8")
+  fs.readFileSync(path.resolve("./docu.json"), "utf-8")
 );
 
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));

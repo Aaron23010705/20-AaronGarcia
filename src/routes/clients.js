@@ -11,7 +11,7 @@ router.route("/")
 
 router.route("/:id")
 .get(ClientsController.getClientById)
-.put(ClientsController.updateLocal)
-.delete(ClientsController.deleteLocal)
+.put(ClientsController.updateClients)
+.delete(ClientsController.deleteClients)
 
 export default router
